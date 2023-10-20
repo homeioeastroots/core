@@ -454,6 +454,12 @@ async def test_call_service_error(
 
     hass.services.async_register("domain_test", "ha_error", ha_error_call)
 
+    @callback
+    def service_error_call(_):
+        raise HomeAssistantError("error_message")
+
+    hass.services.async_register("domain_test", "service_error", service_error_call)
+
     async def unknown_error_call(_):
         raise ValueError("value_error")
 
@@ -480,12 +486,28 @@ async def test_call_service_error(
             "id": 6,
             "type": "call_service",
             "domain": "domain_test",
-            "service": "unknown_error",
+            "service": "service_error",
         }
     )
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == 6
+    assert msg["type"] == const.TYPE_RESULT
+    assert msg["success"] is False
+    assert msg["error"]["code"] == "home_assistant_error"
+    assert msg["error"]["message"] == "error_message"
+
+    await websocket_client.send_json(
+        {
+            "id": 7,
+            "type": "call_service",
+            "domain": "domain_test",
+            "service": "unknown_error",
+        }
+    )
+
+    msg = await websocket_client.receive_json()
+    assert msg["id"] == 7
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"] is False
     assert msg["error"]["code"] == "unknown_error"

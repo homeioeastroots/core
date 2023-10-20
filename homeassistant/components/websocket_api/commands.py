@@ -21,6 +21,7 @@ from homeassistant.const import (
 from homeassistant.core import Context, Event, HomeAssistant, State, callback
 from homeassistant.exceptions import (
     HomeAssistantError,
+    ServiceError,
     ServiceNotFound,
     TemplateError,
     Unauthorized,
@@ -236,6 +237,10 @@ async def handle_call_service(
             connection.send_error(msg["id"], const.ERR_HOME_ASSISTANT_ERROR, str(err))
     except vol.Invalid as err:
         connection.send_error(msg["id"], const.ERR_INVALID_FORMAT, str(err))
+    except ServiceError as err:
+        connection.logger.error(err)
+        connection.logger.debug("", exc_info=err)
+        connection.send_error(msg["id"], const.ERR_HOME_ASSISTANT_ERROR, str(err))
     except HomeAssistantError as err:
         connection.logger.exception(err)
         connection.send_error(msg["id"], const.ERR_HOME_ASSISTANT_ERROR, str(err))
